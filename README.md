@@ -1,14 +1,16 @@
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unique High-Low Wisdom</title>
+    <title>Unique High-Low Wisdom (Mincho)</title>
     <style>
         /* --- 重厚な賢者の書斎 --- */
         body {
             background-color: #fdfdfd;
             color: #111;
-            font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", serif;
+            /* 全てを明朝体で統一 */
+            font-family: "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "HGS Mincho E", "MS PMincho", "MS Mincho", serif;
             margin: 0;
             padding: 0;
             height: 100vh;
@@ -104,12 +106,12 @@
         .author-meta {
             font-size: 0.9rem;
             color: #444;
-            font-weight: normal;
+            font-weight: normal; /* 明朝体なので太字にしすぎない */
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             align-items: center;
-            font-family: sans-serif;
+            /* font-family指定を削除し、bodyの明朝体を継承 */
         }
 
         .award-text {
@@ -166,7 +168,7 @@
         </div>
     </div>
 
-    <div class="loader" id="loader">迷言を検索中...</div>
+    <div class="loader" id="loader">格言を検索中...</div>
 
     <script>
         /* --- 設定 --- */
@@ -222,7 +224,7 @@
         ];
 
         /* --- 検索クエリC：肩書き --- */
-        const JOB_SEEDS = ["師", "家", "長", "手", "員", "王", "神", "官", "将", "隊", "係", "座", "犯", "伯", "公", "民", "マニア", "オタク"];
+        const JOB_SEEDS = ["師", "家", "長", "手", "員", "王", "神", "官", "将", "隊", "係", "座", "犯", "魔", "鬼", "仙", "匠", "伯", "公", "民", "マニア", "オタク"];
 
         /* --- フィルター --- */
         const BAD_WORDS = ["一覧", "カテゴリ", "年", "月", "日", "県", "市", "区", "町", "村", "駅", "線", "大学", "協会", "学会", "法", "製", "賞", "戦", "史", "登場人物", "放送", "アルバム", "作品"];
@@ -283,10 +285,10 @@
             let upperParts = [];
             let lowerParts = [];
 
-            // 上の句（高尚）: 「〜とは、」「〜において、」「〜という概念は、」
+            // 上の句（高尚）
             const highRegex = /([^、。！？\s]{4,20}(とは|においては|という概念は|の本質は|の真理は))、/g;
             
-            // 下の句（低俗）: 「〜である。」「〜してしまう。」「〜に過ぎない。」「〜最強。」
+            // 下の句（低俗）
             const lowRegex = /、([^、。！？\s]{5,20}(である|だ|してしまう|した|ない|最強|マシ|草|不可避|詰んだ|運命|バグ|真実|限界|罪))([。！？])/g;
 
             highSnippets.forEach(snip => {
@@ -302,20 +304,33 @@
             });
 
             if (upperParts.length > 0 && lowerParts.length > 0) {
-                // 試行して重複しない組み合わせを探す
                 for(let i=0; i<20; i++) {
                     const upper = upperParts[Math.floor(Math.random() * upperParts.length)];
                     const lower = lowerParts[Math.floor(Math.random() * lowerParts.length)];
                     const cleanUpper = upper.replace(/^[、。！？]/, "").replace(/^[^一-龠ァ-ヶーa-zA-Z0-9]+/, "");
                     const combined = cleanUpper + lower;
 
-                    // ★履歴チェック★
                     if (combined.length <= 50 && !History.quotes.has(combined) && !/[（）\(\)『』「」]/.test(combined)) {
                         return combined;
                     }
                 }
             }
             return null;
+        }
+
+        // 語尾を格言風（かつアホ）に変換する
+        function sageifyEnding(text) {
+            const r = Math.random();
+            if (text.endsWith("。")) {
+                text = text.slice(0, -1); 
+                if (r < 0.1) return text + "、という真理。";
+                if (r < 0.2) return text + "、即ち死なり。";
+                if (r < 0.3) return text + "、それが世界の答えだ。";
+                if (r < 0.4) return text + "……知らんけど。";
+                if (r < 0.5) return text + "、故に我あり。";
+                return text + "。";
+            }
+            return text;
         }
 
         /* --- メインサイクル --- */
@@ -339,67 +354,61 @@
                 try {
                     const pRandom = fetchRandomPages(); 
                     
-                    // 1. 高尚なフリ
                     const highQ = HIGH_QUERIES[Math.floor(Math.random() * HIGH_QUERIES.length)];
                     const pHighSnippets = searchSnippets(highQ);
 
-                    // 2. 低俗なオチ
                     const lowQ = LOW_QUERIES[Math.floor(Math.random() * LOW_QUERIES.length)];
                     const pLowSnippets = searchSnippets(lowQ);
 
-                    // 3. 肩書き
                     const jobSeed = JOB_SEEDS[Math.floor(Math.random() * JOB_SEEDS.length)];
                     const pJobTitles = searchTitles(jobSeed, 20);
 
-                    // 4. 賞
                     const fetchAward = Math.random() < 0.3;
                     const pAwards = fetchAward ? searchTitles("賞", 10) : Promise.resolve([]);
 
                     const [randPages, highSnips, lowSnips, jobTitles, awardTitles] = await Promise.all([pRandom, pHighSnippets, pLowSnippets, pJobTitles, pAwards]);
 
-                    // --- 名言生成 ---
                     if (highSnips.length > 0 && lowSnips.length > 0) {
-                        quote = mixHighLow(highSnips, lowSnips);
+                        let candidate = mixHighLow(highSnips, lowSnips);
+                        if (candidate) {
+                            quote = sageifyEnding(candidate);
+                            History.quotes.add(quote);
+                        }
                     }
 
-                    // --- 名前生成 ---
-                    // 重複チェックしながら生成
                     const combinedNameSrc = [...randPages.map(p=>p.title), ...jobTitles];
                     let tempAuthor = makeGlobalName(combinedNameSrc);
                     if (!History.authors.has(tempAuthor)) {
                         author = tempAuthor;
                     }
 
-                    // --- 肩書き生成 ---
                     const validJobs = jobTitles.filter(t => { 
-                        return t.endsWith(jobSeed) && isCleanWord(t) && t.length >= 2 && t.length <= 12 && isSafeJob(t) && !History.jobs.has(t); 
+                        return t.endsWith(jobSeed) && isCleanWord(t) && t.length >= 2 && t.length <= 10 && !History.jobs.has(t); 
                     });
                     if (validJobs.length > 0) { 
                         job = validJobs[Math.floor(Math.random() * validJobs.length)]; 
+                        History.jobs.add(job);
                     }
 
-                    // --- 賞 ---
                     const validAwards = awardTitles.filter(t => t.endsWith("賞") && isCleanWord(t) && !History.awards.has(t));
                     if (validAwards.length > 0) { 
                         award = validAwards[Math.floor(Math.random() * validAwards.length)]; 
+                        History.awards.add(award);
                     }
 
                 } catch(e) { console.error(e); }
                 retry++;
             }
 
-            // フォールバック
             if(!quote) quote = "存在論のパラドックスとは、二度寝である。";
             if(!author) author = "ジョン・スミス";
             if(!job) job = "哲学者";
 
-            // ★履歴登録★
             History.quotes.add(quote);
             History.authors.add(author);
             History.jobs.add(job);
             if(award) History.awards.add(award);
 
-            // 画像生成
             let uniqueId;
             let safety = 0;
             do { 
@@ -439,4 +448,4 @@
 
     </script>
 </body>
-</html>
+</html>F
